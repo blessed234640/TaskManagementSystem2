@@ -1,0 +1,22 @@
+version: "3.9"
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: TaskManagement.Api/Dockerfile
+    container_name: taskmanagement-api
+    environment:
+      # Используем отдельную папку внутри контейнера для файла БД
+      - ConnectionStrings__DefaultConnection=Data Source=/app/data/tasks.db
+      - ASPNETCORE_ENVIRONMENT=Development
+    volumes:
+      - tasks-data:/app/data
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+
+volumes:
+  tasks-data:
+    driver: local
+

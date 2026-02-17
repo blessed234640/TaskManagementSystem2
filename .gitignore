@@ -1,0 +1,42 @@
+# Общие
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.log
+*.tmp
+*.tmp.*
+*.bak
+*.swp
+*.DS_Store
+Thumbs.db
+
+# Папки сборки .NET
+bin/
+obj/
+
+# Rider / VSCode / прочие IDE
+.idea/
+.vscode/
+.vs/
+
+# Пакеты NuGet
+**/packages/
+*.nupkg
+
+# SQLite база данных
+tasks.db
+*.db-shm
+*.db-wal
+
+# Frontend (Node / Vite / Vue)
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/.env.local
+frontend/.env.*.local
+
+# Docker
+docker-compose.override.yml
+*.orig
+
