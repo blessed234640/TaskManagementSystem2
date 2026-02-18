@@ -4,8 +4,8 @@
 // - ниже список задач и действия в зависимости от роли.
 import { ref, computed, onMounted } from 'vue'
 
-// URL backend API; по умолчанию берём HTTPS-профиль из launchSettings.
-const apiBaseUrl = 'https://localhost:7073'
+// URL backend API; для Docker используем http://localhost:8080
+const apiBaseUrl = 'http://localhost:8080'
 
 const email = ref('manager@example.com')
 const password = ref('manager123')
@@ -21,6 +21,13 @@ const error = ref('')
 
 const canCreateTasks = computed(() => currentRole.value === 'MANAGER')
 const canAssignTasks = computed(() => currentRole.value === 'MANAGER')
+const canDeleteTasks = computed(() => currentRole.value === 'MANAGER')
+
+const editingTask = ref(null)
+const editForm = ref({
+  title: '',
+  description: ''
+})
 
 // Человекочитаемые подписи для статуса и приоритета
 const statusLabels = {
@@ -37,6 +44,9 @@ const priorityLabels = {
 
 const formatStatus = (value) => statusLabels[value] ?? value
 const formatPriority = (value) => priorityLabels[value] ?? value
+const assignableUsers = computed(() => {
+  return users.value.filter(u => u.role?.code !== 'VIEWER')
+})
 
 async function apiFetch(path, options = {}) {
   error.value = ''
@@ -188,6 +198,59 @@ async function assignTask(task, userId) {
   }
 }
 
+function startEdit(task) {
+  editingTask.value = task
+  editForm.value = {
+    title: task.title,
+    description: task.description || ''
+  }
+}
+
+function cancelEdit() {
+  editingTask.value = null
+  editForm.value = { title: '', description: '' }
+}
+
+async function saveEdit() {
+  if (!editingTask.value || !editForm.value.title) {
+    error.value = 'Укажите заголовок задачи'
+    return
+  }
+  try {
+    isLoading.value = true
+    await apiFetch(`/api/tasks/${editingTask.value.id}`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        title: editForm.value.title,
+        description: editForm.value.description
+      }),
+    })
+    await loadTasks()
+    cancelEdit()
+  } catch (e) {
+    error.value = e.message || 'Ошибка редактирования задачи'
+  } finally {
+    isLoading.value = false
+  }
+}
+
+async function deleteTask(task) {
+  if (!confirm(`Удалить задачу "${task.title}"?`)) {
+    return
+  }
+  try {
+    isLoading.value = true
+    await apiFetch(`/api/tasks/${task.id}`, {
+      method: 'DELETE',
+    })
+    await loadTasks()
+  } catch (e) {
+    error.value = e.message || 'Ошибка удаления задачи'
+  } finally {
+    isLoading.value = false
+  }
+}
+
 onMounted(() => {
   loadInitialData()
 })
@@ -238,7 +301,7 @@ onMounted(() => {
           Исполнитель
           <select v-model.number="newTask.assignedToUserId">
             <option disabled :value="null">Выберите пользователя</option>
-            <option v-for="u in users" :key="u.id" :value="u.id">
+            <option v-for="u in assignableUsers" :key="u.id" :value="u.id">
               {{ u.fullName }} ({{ u.role?.code }})
             </option>
           </select>
@@ -251,23 +314,47 @@ onMounted(() => {
         <p v-if="isLoading">Загрузка...</p>
         <ul v-else>
           <li v-for="t in tasks" :key="t.id" class="task-item">
-            <div class="task-main">
-              <strong>{{ t.title }}</strong>
-              <span>Статус: {{ formatStatus(t.status) }}</span>
-              <span>Приоритет: {{ formatPriority(t.priority) }}</span>
-              <span>Исполнитель: {{ t.assignedToUser?.fullName }}</span>
+            <!-- Режим редактирования -->
+            <div v-if="editingTask?.id === t.id" class="task-edit">
+              <h3>Редактирование задачи</h3>
+              <label>
+                Заголовок
+                <input v-model="editForm.title" />
+              </label>
+              <label>
+                Описание
+                <textarea v-model="editForm.description" />
+              </label>
+              <div class="edit-actions">
+                <button @click="saveEdit" :disabled="isLoading">Сохранить</button>
+                <button @click="cancelEdit">Отмена</button>
+              </div>
             </div>
-            <div class="task-actions">
-              <button @click="changeStatus(t, 1)">В работу</button>
-              <button @click="changeStatus(t, 2)">Завершить</button>
+            
+            <!-- Обычный режим отображения -->
+            <div v-else>
+              <div class="task-main">
+                <strong>{{ t.title }}</strong>
+                <span v-if="t.description" class="task-description">{{ t.description }}</span>
+                <span>Статус: {{ formatStatus(t.status) }}</span>
+                <span>Приоритет: {{ formatPriority(t.priority) }}</span>
+                <span>Исполнитель: {{ t.assignedToUser?.fullName }}</span>
+              </div>
+              <div class="task-actions">
+                <button @click="changeStatus(t, 1)">В работу</button>
+                <button @click="changeStatus(t, 2)">Завершить</button>
+                
+                <button v-if="canDeleteTasks" @click="deleteTask(t)" class="delete-btn">Удалить</button>
+                <button @click="startEdit(t)" class="edit-btn">Редактировать</button>
 
-              <div v-if="canAssignTasks">
-                <select @change="assignTask(t, Number($event.target.value))">
-                  <option :value="t.assignedToUserId">Переназначить...</option>
-                  <option v-for="u in users" :key="u.id" :value="u.id">
-                    {{ u.fullName }}
-                  </option>
-                </select>
+                <div v-if="canAssignTasks">
+                  <select @change="assignTask(t, Number($event.target.value))">
+                    <option :value="t.assignedToUserId">Переназначить...</option>
+                    <option v-for="u in assignableUsers" :key="u.id" :value="u.id">
+                      {{ u.fullName }}
+                    </option>
+                  </select>
+                </div>
               </div>
             </div>
           </li>
@@ -346,6 +433,41 @@ button {
   flex-direction: column;
   gap: 0.2rem;
   margin-bottom: 0.4rem;
+}
+
+.task-description {
+  color: #666;
+  font-style: italic;
+  margin: 0.2rem 0;
+}
+
+.task-edit {
+  border: 2px solid #007bff;
+  padding: 1rem;
+  margin-bottom: 0.5rem;
+  border-radius: 4px;
+  background: #f8f9fa;
+}
+
+.task-edit h3 {
+  margin: 0 0 0.5rem 0;
+  color: #007bff;
+}
+
+.edit-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.edit-btn {
+  background: #28a745;
+  color: white;
+}
+
+.delete-btn {
+  background: #dc3545;
+  color: white;
 }
 
 .task-actions {

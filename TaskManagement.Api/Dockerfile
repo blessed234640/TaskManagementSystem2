@@ -15,6 +15,9 @@ WORKDIR /app
 
 ENV ASPNETCORE_URLS=http://+:8080
 
+# Создаем папку для данных SQLite
+RUN mkdir -p /app/data
+
 COPY --from=build /app/publish .
 
 EXPOSE 8080

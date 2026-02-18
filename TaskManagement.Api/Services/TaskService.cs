@@ -76,10 +76,15 @@ public class TaskService : ITaskService
 
         EnsureHasPermission(currentUser, "TASK_CREATE");
 
-        var assignedUser = await _db.Users.FirstOrDefaultAsync(u => u.Id == request.AssignedToUserId, cancellationToken);
+        var assignedUser = await _db.Users.Include(u => u.Role).FirstOrDefaultAsync(u => u.Id == request.AssignedToUserId, cancellationToken);
         if (assignedUser == null)
         {
             throw new ArgumentException("Assignee user not found");
+        }
+
+        if (assignedUser.Role.Code == "VIEWER")
+        {
+            throw new ArgumentException("Cannot assign tasks to viewers (observers)");
         }
 
         var task = new TaskItem
@@ -173,10 +178,15 @@ public class TaskService : ITaskService
             throw new UnauthorizedAccessException("Only manager can assign tasks");
         }
 
-        var assignee = await _db.Users.FirstOrDefaultAsync(u => u.Id == assigneeUserId, cancellationToken);
+        var assignee = await _db.Users.Include(u => u.Role).FirstOrDefaultAsync(u => u.Id == assigneeUserId, cancellationToken);
         if (assignee == null)
         {
             throw new ArgumentException("Assignee user not found");
+        }
+
+        if (assignee.Role.Code == "VIEWER")
+        {
+            throw new ArgumentException("Cannot assign tasks to viewers (observers)");
         }
 
         task.AssignedToUserId = assigneeUserId;

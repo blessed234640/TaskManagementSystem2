@@ -49,7 +49,7 @@ public class AuthController : ControllerBase
     [Authorize]
     public async Task<IActionResult> Me(CancellationToken cancellationToken)
     {
-        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue(ClaimTypes.Name);
+        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue(ClaimTypes.Name);
         if (!int.TryParse(userIdClaim, out var userId))
         {
             return Unauthorized();

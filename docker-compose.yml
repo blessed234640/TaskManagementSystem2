@@ -9,7 +9,11 @@ services:
     environment:
       # Используем отдельную папку внутри контейнера для файла БД
       - ConnectionStrings__DefaultConnection=Data Source=/app/data/tasks.db
-      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_ENVIRONMENT=Docker
+      - Jwt__SecretKey=super_secret_development_key_change_me_for_docker
+      - Jwt__Issuer=TaskManagement.Api
+      - Jwt__Audience=TaskManagement.Client
+      - Jwt__ExpirationMinutes=120
     volumes:
       - tasks-data:/app/data
     ports:
