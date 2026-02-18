@@ -76,7 +76,7 @@ npm run dev
    }
    ```
 5. Нажмите **"Execute"**
-6. **Скопируйте токен** из поля "token" в ответе (весь токен целиком)
+6. **Скопируйте токен** из поля "token" в ответе (весь токен целиком без "")
 
 **Шаг 2: Активация JWT авторизации**
 1. Нажмите кнопку **"Authorize"** вверху справа (рядом с кнопками "Execute"/"Clear")
@@ -294,4 +294,3 @@ dotnet ef database update
 - **Backend**: .NET 8, EF Core, SQLite, JWT
 - **Frontend**: Vue 3, Vite, Fetch API
 - **Контейнеризация**: Docker, docker-compose
->>>>>>> 4373a50c5ccf945e2b1ec7fd2b713c8413dde82b
